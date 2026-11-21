@@ -89,7 +89,55 @@ sender nonce untouched, replay rejected.
 
 No porting started; this is gated on the mentor's client-matrix decision.
 
-## 6. What comes next
+## 6. Update — 2026-11-21: Apothem client matrix + live EIP demos on hegota-20118
+
+**Apothem testnet (chain id 51) five-client matrix** — all clients launched
+from this harness (`join.sh --network apothem`), peers harvested live from a
+connected client's `admin_peers` after the 28 public bootnodes saturated
+(TOO_MANY_PEERS):
+
+- **xOne:** syncs with `XDC_EXPERIMENTAL_SNAPSYNC=1`; experimental snap
+  state-download wedged at ~4h with 0 blocks, node sacrificed for RAM.
+- **Geth (XDC fork):** no snap sync on Apothem — full sync ~40 blk/s.
+- **Besu (26.7-develop-ddcf744):** two independent defects proven — snap mode
+  drops every peer `USELESS_PEER_EXCEEDS_TRAILING_BLOCKS`; full mode rejects
+  canonical block 2710 (`Invalid block 2710`, hash verified against public
+  RPC). Stopped; bug report owed to XDCIndia/besu-xdc.
+- **Erigon:** needs the built-in `--chain xdc-apothem` chainspec (vendored
+  genesis panics); syncs ~33 blk/s with live-enode bootnodes+staticpeers.
+- **Nethermind:** ships and syncs (~71 blk/s) once bootstrapped with live
+  enodes.
+
+All four still-running nodes were wired to **XDC SkyNet**
+(skynet.xdcindia.com, Apothem view) with manual registrations named
+`aryan-geth` / `aryan-erigon` / `aryan-nethermind`; heartbeats every 30s.
+(Gotchas: SkyNet `identify` dedupes by fingerprint and cannot rename — use
+manual `/api/v1/nodes/register`; node-id credential bind files must be
+chmod 666 before container start, updated in place, never rewritten.)
+
+**Live EIP demos on the untouched 52k-block hegota-20118 net** — the genesis
+faucet key (0xa51e034e…8, present in every hegota genome) proved
+unrecoverable, and epoch rewards do not land in sealer coinbases on this
+fork, so the only spendable funds are sealer signing dust (~0.0177 XDC).
+The e2e drivers were patched for dust-scale funding (fund 1→0.004 XDC;
+feeCap 100→13 gwei — the pool's upfront check is gasLimit×feeCap and
+instantly bankrupted the funded sender; baseFee is pinned at 12.5 gwei):
+
+- **EIP-8250 keyed nonces — PASS (re-verified live):** keyed frame tx
+  `0x1a58bf08…bb27` mined block 53074 status=1 gasUsed=130850 (byte-exact
+  historical value), nonce-manager slot written to the 0xffff…ffff single-use
+  sentinel, account nonce untouched, replay rejected "nonce key 7 already
+  used".
+  Evidence: `evidence/keyede2e-hegota-2026-11-21.log`.
+- **EIP-8141 Phase 3 scenarios (atomic batch, payment accounting, sponsored
+  payment) — re-run in progress:** dust-scale patch applied (sender funded
+  0.0098 XDC, deploy gas limits 500k→100k, frame gas limits cut ~40%,
+  approver pre-funded 0.004 XDC at deploy). First deploy confirmation
+  stalled under the net's deep-reorg churn at the time of writing; run to be
+  resumed and receipt-re-verified at depth as before.
+  Log so far: `evidence/phase3e2e-hegota-dust-2026-11-21.log`.
+
+## 7. What comes next
 
 1. Contribution of the code and drivers behind the above (consensus fixes,
    EIP-8141/8250 implementation, `cmd/conformcheck`, launchers and genomes
